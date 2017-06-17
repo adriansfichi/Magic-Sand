@@ -1,0 +1,3 @@
+D:/of_v0.9.8_vs_release/apps/myApps/Magic-Sand/build/CMakeFiles/Magic-Sand.dir
+D:/of_v0.9.8_vs_release/apps/myApps/Magic-Sand/build/CMakeFiles/ALL_BUILD.dir
+D:/of_v0.9.8_vs_release/apps/myApps/Magic-Sand/build/CMakeFiles/ZERO_CHECK.dir

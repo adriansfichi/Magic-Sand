@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include <iostream>
 #include "ofMain.h"
 
-#include "../KinectProjector/KinectProjector.h"
+#include "../ZedProjector/ZedProjector.h"
 #include "ColorMap.h"
 #endif /* defined(__GreatSand__SandSurfaceRenderer__) */
 
@@ -65,7 +65,7 @@ private:
 
 class SandSurfaceRenderer {
 public:
-    SandSurfaceRenderer(std::shared_ptr<KinectProjector> const& k, std::shared_ptr<ofAppBaseWindow> const& p);
+    SandSurfaceRenderer(std::shared_ptr<ZedProjector> const& k, std::shared_ptr<ofAppBaseWindow> const& p);
     
     // Main loop function
     void setup(bool sdisplayGui);
@@ -97,7 +97,7 @@ private:
     bool saveSettings();
     
     // shared pointers
-    std::shared_ptr<KinectProjector> kinectProjector;
+    std::shared_ptr<ZedProjector> zedProjector;
     std::shared_ptr<ofAppBaseWindow> projWindow;
     bool settingsLoaded;
     
@@ -105,8 +105,8 @@ private:
     int projResX, projResY;
     
     // Conversion matrices
-    ofMatrix4x4                 transposedKinectProjMatrix;
-    ofMatrix4x4                 transposedKinectWorldMatrix;
+    ofMatrix4x4                 transposedZedProjMatrix;
+    ofMatrix4x4                 transposedZedWorldMatrix;
 
     // Mesh
     ofMesh mesh;
@@ -122,8 +122,8 @@ private:
     ofFbo   contourLineFramebufferObject;
 
     // Base plane
-    ofVec3f basePlaneNormal, basePlaneNormalBack;
-    ofVec3f basePlaneOffset, basePlaneOffsetBack;
+    glm::vec3 basePlaneNormal, basePlaneNormalBack;
+    glm::vec3 basePlaneOffset, basePlaneOffsetBack;
     ofVec4f basePlaneEq; // Base plane equation in GLSL-compatible format
 
     // Colormap

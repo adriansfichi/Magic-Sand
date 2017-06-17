@@ -141,7 +141,7 @@ bool ColorMap::loadFile(string filename) {
         for(int i = 0; i < numberOfSavedPoints; i++){
             settings.pushTag("key", i);
             
-            ofPoint p;
+            ofGlmPoint p;
             float h = settings.getValue("height", 0);
             char r = settings.getValue("color-r", 0);
             char g = settings.getValue("color-g", 0);
@@ -168,7 +168,7 @@ void ColorMap::saveFile(string filename) {
     ofxXmlSettings positions;
     positions.addTag("keys");
     positions.pushTag("keys");
-    //points is a vector<ofPoint> that we want to save to a file
+    //points is a vector<ofGlmPoint> that we want to save to a file
     for(int i = 0; i < heightMapKeys.size(); i++){
         //each position tag represents one point
         positions.addTag("key");
@@ -210,7 +210,7 @@ bool ColorMap::createFile(string filename) {
     ofxXmlSettings positions;
     positions.addTag("keys");
     positions.pushTag("keys");
-    //points is a vector<ofPoint> that we want to save to a file
+    //points is a vector<ofGlmPoint> that we want to save to a file
     for(int i = 0; i < heightMapKeys.size(); i++){
         //each position tag represents one point
         positions.addTag("key");

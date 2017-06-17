@@ -1,10 +1,10 @@
 /***********************************************************************
-KinectProjectorCalibration.cpp - KinectProjectorCalibration compute
-the calibration of the kinect and projector.
+ZedProjectorCalibration.cpp - ZedProjectorCalibration compute
+the calibration of the Zed and projector.
 Copyright (c) 2016 Thomas Wolf
 
---- Adapted from ofxKinectProjectorToolkit by Gene Kogan:
-https://github.com/genekogan/ofxKinectProjectorToolkit
+--- Adapted from ofxZedProjectorToolkit by Gene Kogan:
+https://github.com/genekogan/ofxZedProjectorToolkit
 Copyright (c) 2014 Gene Kogan
 
 This file is part of the Magic Sand.
@@ -33,17 +33,17 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "libs/dlib/matrix/matrix_qr.h"
 
 
-class ofxKinectProjectorToolkit
+class ofxZedProjectorToolkit
 {
 public:
-    ofxKinectProjectorToolkit(ofVec2f projRes, ofVec2f kinectRes);
+    ofxZedProjectorToolkit(glm::vec2 projRes, glm::vec2 zedRes);
     
-    void calibrate(vector<ofVec3f> pairsKinect,
-                   vector<ofVec2f> pairsProjector);
+    void calibrate(vector<glm::vec3> pairsZed,
+                   vector<glm::vec2> pairsProjector);
     
-    ofVec2f getProjectedPoint(ofVec3f worldPoint);
-    ofMatrix4x4 getProjectionMatrix();
-    vector<ofVec2f> getProjectedContour(vector<ofVec3f> *worldPoints);
+    glm::vec2 getProjectedPoint(glm::vec3 worldPoint);
+    glm::mat4x4 getProjectionMatrix();
+    vector<glm::vec2> getProjectedContour(vector<glm::vec3> *worldPoints);
     
     vector<double> getCalibration();
     
@@ -58,11 +58,11 @@ private:
     dlib::matrix<double, 0, 1> y;
     dlib::matrix<double, 11, 1> x;
     
-    ofMatrix4x4 projMatrice;
+    glm::mat4x4 projMatrice;
     
     bool calibrated;
-	ofVec2f projRes;
-	ofVec2f kinectRes;
+	glm::vec2 projRes;
+	glm::vec2 zedRes;
 };
 
 #endif /* defined(__Magic_Sand__Calibration__) */

@@ -34,12 +34,12 @@ bool setSecondWindowDimensions(ofGLFWWindowSettings& settings) {
 
 		settings.width = desktopMode->width;
 		settings.height = desktopMode->height;
-		settings.setPosition(ofVec2f(xM, yM));
+		settings.setPosition(glm::vec2(xM, yM));
 		return true;
 	} else {
 		settings.width = 800; // Default settings if there is only one screen
 		settings.height = 600;
-		settings.setPosition(ofVec2f(0, 0));
+		settings.setPosition(glm::vec2(0, 0));
 		return false;
 	}
 }

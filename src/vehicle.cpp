@@ -21,13 +21,13 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 #include "vehicle.h"
 
-Vehicle::Vehicle(std::shared_ptr<KinectProjector> const& k, ofPoint slocation, ofRectangle sborders, bool sliveInWater, ofVec2f smotherLocation) {
-    kinectProjector = k;
+Vehicle::Vehicle(std::shared_ptr<ZedProjector> const& k, ofGlmPoint slocation, ofRectangle sborders, bool sliveInWater, glm::vec2 smotherLocation) {
+    zedProjector = k;
     liveInWater = sliveInWater;
     location = slocation;
     borders = sborders;
-    globalVelocityChange.set(0, 0);
-    velocity.set(0.0, 0.0);
+    globalVelocityChange=glm::vec3(0, 0,0);
+    velocity= glm::vec3(0.0, 0.0,0.0);
     angle = 0;
     wandertheta = 0;
     mother = false;
@@ -36,19 +36,19 @@ Vehicle::Vehicle(std::shared_ptr<KinectProjector> const& k, ofPoint slocation, o
 
 void Vehicle::updateBeachDetection(){
     // Find sandbox gradients and elevations in the next 10 steps of vehicle v, update vehicle variables
-    ofPoint futureLocation;
+    ofGlmPoint futureLocation;
     futureLocation = location;
-    beachSlope = ofVec2f(0);
+    beachSlope = glm::vec2(0);
     beach = false;
     int i = 1;
     while (i < 10 && !beach)
     {
-        bool overwater = kinectProjector->elevationAtKinectCoord(futureLocation.x, futureLocation.y) > 0;
+        bool overwater = zedProjector->elevationAtZedCoord(futureLocation.x, futureLocation.y) > 0;
         if ((overwater && liveInWater) || (!overwater && !liveInWater))
         {
             beach = true;
             beachDist = i;
-            beachSlope = kinectProjector->gradientAtKinectCoord(futureLocation.x,futureLocation.y);
+            beachSlope = zedProjector->gradientAtZedCoord(futureLocation.x,futureLocation.y);
             if (liveInWater)
                 beachSlope *= -1;
         }
@@ -57,13 +57,13 @@ void Vehicle::updateBeachDetection(){
     }
 }
 
-ofPoint Vehicle::bordersEffect(){
-    ofPoint desired, futureLocation;
+ofGlmPoint Vehicle::bordersEffect(){
+    ofGlmPoint desired, futureLocation;
     
     // Predict location 10 (arbitrary choice) frames ahead
     futureLocation = location + velocity*10;
     
-    ofPoint target = location;
+    ofGlmPoint target = location;
     if (!internalBorders.inside(futureLocation)){ // Go to the opposite direction
         border = true;
         if (futureLocation.x < internalBorders.getLeft())
@@ -79,62 +79,63 @@ ofPoint Vehicle::bordersEffect(){
     }
     
     desired = target - location;
-    desired.normalize();
+	desired= glm::normalize(desired);
     desired *= topSpeed;
     
-    ofPoint velocityChange(0);
+    ofGlmPoint velocityChange(0);
     velocityChange = desired - velocity;
-    velocityChange.limit(maxVelocityChange);
+
+	glm::clamp(velocityChange,glm::vec3(0), glm::vec3(maxVelocityChange));
     return velocityChange;
 }
 
-ofPoint Vehicle::wanderEffect(){
+ofGlmPoint Vehicle::wanderEffect(){
     
-    ofPoint velocityChange, desired;
+    ofGlmPoint velocityChange, desired;
     
     wandertheta += ofRandom(-change,change);     // Randomly change wander theta
     
-    ofPoint front = velocity;
-    front.normalize();
+    ofGlmPoint front = velocity;
+	glm::normalize(front);
     front *= wanderD;
-    ofPoint circleloc = location + front;
+    ofGlmPoint circleloc = location + front;
     
-	float h = front.angle(ofVec2f(1,0)); // We need to know the heading to offset wandertheta
+	float h =glm::angle(front,glm::vec3(1,0,0)); // We need to know the heading to offset wandertheta
     
-    ofPoint circleOffSet = ofPoint(wanderR*cos(wandertheta+h),wanderR*sin(wandertheta+h));
-    ofPoint target = circleloc + circleOffSet;
+    ofGlmPoint circleOffSet = ofGlmPoint(wanderR*cos(wandertheta+h),wanderR*sin(wandertheta+h),0);
+    ofGlmPoint target = circleloc + circleOffSet;
     
     desired = target - location;
-    desired.normalize();
+    glm::normalize(desired);
     desired *= topSpeed;
     
     velocityChange = desired - velocity;
-    velocityChange.limit(maxVelocityChange);
+	glm::clamp(velocityChange, glm::vec3(0), glm::vec3(maxVelocityChange));
     
     return velocityChange;
 }
 
-ofPoint Vehicle::slopesEffect(){
-    ofPoint desired, velocityChange;
+ofGlmPoint Vehicle::slopesEffect(){
+    ofGlmPoint desired, velocityChange;
     
-    desired = beachSlope;
-    desired.normalize();
+    desired =ofGlmPoint(beachSlope,0);
+    glm::normalize(desired);
     desired *= topSpeed;
     if(beach){
         desired /= beachDist; // The closest the beach is, the more we want to avoid it
     }
     velocityChange = desired - velocity;
-    velocityChange.limit(maxVelocityChange);
+	glm::clamp(velocityChange, glm::vec3(0), glm::vec3(maxVelocityChange));
     
     return velocityChange;
 }
 
-ofPoint Vehicle::seekEffect(){
-    ofPoint desired;
-    desired = motherLocation - location;
+ofGlmPoint Vehicle::seekEffect(){
+    ofGlmPoint desired;
+    desired = ofGlmPoint(motherLocation - location,0);
     
     float d = desired.length();
-    desired.normalize();
+    glm::normalize(desired);
     
     //If we are closer than XX pixels slow down
     if (d < 10) {
@@ -145,24 +146,24 @@ ofPoint Vehicle::seekEffect(){
         desired *= topSpeed;
     }
     
-    ofPoint velocityChange;
+    ofGlmPoint velocityChange;
     velocityChange = desired - velocity;
-    velocityChange.limit(maxVelocityChange);
+	glm::clamp(velocityChange, glm::vec3(0), glm::vec3(maxVelocityChange));
     
     //If we are further than XX pixels we don't see the mother
     if (d > 100) {
-        velocityChange = ofPoint(0);
+        velocityChange = ofGlmPoint(0);
     }
     
     return velocityChange;
 }
 
 //--------------------------------------------------------------
-//ofPoint Vehicle::separateEffect(vector<vehicle> vehicles){
+//ofGlmPoint Vehicle::separateEffect(vector<vehicle> vehicles){
 ////    float desiredseparation = r*2;
-//    ofPoint velocityChange;
+//    ofGlmPoint velocityChange;
 //    int count = 0;
-//    ofPoint diff;
+//    ofGlmPoint diff;
 //    vector<vehicle>::iterator other;
 //    for (other = vehicles.begin(); other < vehicles.end(); other++){
 //        float d = (location - other->getLocation()).length();
@@ -185,9 +186,9 @@ ofPoint Vehicle::seekEffect(){
 //    return velocityChange;
 //}
 
-std::vector<ofVec2f> Vehicle::getForces(void)
+std::vector<glm::vec2> Vehicle::getForces(void)
 {
-    std::vector<ofVec2f> Forces;
+    std::vector<glm::vec2> Forces;
     Forces.push_back( separateF);
     Forces.push_back( seekF);
     Forces.push_back( bordersF);
@@ -196,16 +197,16 @@ std::vector<ofVec2f> Vehicle::getForces(void)
     return Forces;
 }
 
-void Vehicle::applyVelocityChange(const ofPoint & velocityChange){
+void Vehicle::applyVelocityChange(const ofGlmPoint & velocityChange){
     globalVelocityChange += velocityChange;
 }
 
 void Vehicle::update(){
-    projectorCoord = kinectProjector->kinectCoordToProjCoord(location.x, location.y);
-    if (!mother || velocity.lengthSquared() != 0)
+    projectorCoord = zedProjector->zedCoordToProjCoord(location.x, location.y);
+    if (!mother || glm::length2(velocity) != 0)
     {
         velocity += globalVelocityChange;
-        velocity.limit(topSpeed);
+		glm::clamp(velocity, glm::vec3(0), glm::vec3(topSpeed));
         location += velocity;
         globalVelocityChange *= 0;
         
@@ -240,28 +241,28 @@ void Fish::setup(){
     topSpeed =2;
 }
 
-ofPoint Fish::wanderEffect(){
+ofGlmPoint Fish::wanderEffect(){
     
-    ofPoint velocityChange, desired;
+    ofGlmPoint velocityChange, desired;
     
     wandertheta += ofRandom(-change,change);     // Randomly change wander theta
     
-    ofPoint front = velocity;
-    front.normalize();
+    ofGlmPoint front = velocity;
+    glm::normalize(front);
     front *= wanderD;
-    ofPoint circleloc = location + front;
+    ofGlmPoint circleloc = location + front;
     
     float h = ofRadToDeg(atan2(front.y,front.x)); // Signed angle
     
-    ofPoint circleOffSet = ofPoint(wanderR*cos(wandertheta+h),wanderR*sin(wandertheta+h));
-    ofPoint target = circleloc + circleOffSet;
+    ofGlmPoint circleOffSet = ofGlmPoint(wanderR*cos(wandertheta+h),wanderR*sin(wandertheta+h),0);
+    ofGlmPoint target = circleloc + circleOffSet;
     
     desired = target - location;
-    desired.normalize();
+    glm::normalize(desired);
     desired *= topSpeed;
     
     velocityChange = desired - velocity;
-    velocityChange.limit(maxVelocityChange);
+	glm::clamp(velocityChange, glm::vec3(0), glm::vec3(maxVelocityChange));
     
     return velocityChange;
 }
@@ -270,7 +271,7 @@ void Fish::applyBehaviours(bool seekMother){
     updateBeachDetection();
     
     //    separateF = separateEffect(vehicles);
-    seekF = ofVec2f(0);
+    seekF = glm::vec2(0);
     if (seekMother)
         seekF = seekEffect();
     bordersF = bordersEffect();
@@ -284,16 +285,16 @@ void Fish::applyBehaviours(bool seekMother){
     wanderF *= 0.8;
     
     if (beach){
-        applyVelocityChange(slopesF);
+        applyVelocityChange(ofGlmPoint (slopesF,0));
     }
     if (border){
-        applyVelocityChange(bordersF);
+        applyVelocityChange(ofGlmPoint(bordersF,0));
     }
     //    applyVelocityChange(separateF);
-    if (seekF.lengthSquared() == 0){
-        applyVelocityChange(wanderF);
+    if (glm::length2(seekF) == 0){
+        applyVelocityChange(ofGlmPoint(wanderF,0));
     } else {
-        applyVelocityChange(seekF);
+        applyVelocityChange(ofGlmPoint(seekF,0));
     }
     //    currentForce = separateF+seekF+bordersF+slopesF;
 }
@@ -321,15 +322,16 @@ void Fish::draw()
     float fishHead = tailSize;
     
     ofPolyline fish;
-    fish.curveTo( ofPoint(-fishLength-tailSize*cos(tailangle+0.8), tailSize*sin(tailangle+0.8)));
-    fish.curveTo( ofPoint(-fishLength-tailSize*cos(tailangle+0.8), tailSize*sin(tailangle+0.8)));
-    fish.curveTo( ofPoint(-fishLength, 0));
-    fish.curveTo( ofPoint(0, -fishHead));
-    fish.curveTo( ofPoint(fishHead, 0));
-    fish.curveTo( ofPoint(0, fishHead));
-    fish.curveTo( ofPoint(-fishLength, 0));
-    fish.curveTo( ofPoint(-fishLength-tailSize*cos(tailangle-0.8), tailSize*sin(tailangle-0.8)));
-    fish.curveTo( ofPoint(-fishLength-tailSize*cos(tailangle-0.8), tailSize*sin(tailangle-0.8)));
+	fish.curveTo(glm::vec3(1,1,1));
+    fish.curveTo(-fishLength-tailSize*cos(tailangle+0.8), tailSize*sin(tailangle+0.8),0,0);
+    fish.curveTo( -fishLength-tailSize*cos(tailangle+0.8), tailSize*sin(tailangle+0.8),0,0);
+    fish.curveTo( -fishLength, 0,0);
+    fish.curveTo( 0, -fishHead,0);
+    fish.curveTo(fishHead, 0,0);
+    fish.curveTo(0, fishHead,0);
+    fish.curveTo(-fishLength,0, 0);
+    fish.curveTo(-fishLength-tailSize*cos(tailangle-0.8), tailSize*sin(tailangle-0.8),0);
+    fish.curveTo( -fishLength-tailSize*cos(tailangle-0.8), tailSize*sin(tailangle-0.8),0);
     fish.close();
     ofSetLineWidth(2.0);
     ofColor c = ofColor(255);
@@ -379,31 +381,31 @@ void Rabbit::setup(){
     setWait = false;
 }
 
-ofPoint Rabbit::wanderEffect(){
+ofGlmPoint Rabbit::wanderEffect(){
     
-    ofPoint velocityChange, desired;
+    ofGlmPoint velocityChange, desired;
     
     wandertheta = ofRandom(-change,change);     // Randomly change wander theta
     
     float currDir = ofDegToRad(angle);
-    ofPoint front = ofVec2f(cos(currDir), sin(currDir));
+    ofGlmPoint front = glm::vec3(cos(currDir), sin(currDir),0);
     
-    front.normalize();
+    glm::normalize(front);
     front *= wanderD;
-    ofPoint circleloc = location + front;
+    ofGlmPoint circleloc = location + front;
     
     //    float h = ofRadToDeg(atan2(front.x,front.y));
-    //	float h = front.angle(ofVec2f(1,0)); // We need to know the heading to offset wandertheta
+    //	float h = front.angle(glm::vec2(1,0)); // We need to know the heading to offset wandertheta
     
-    ofPoint circleOffSet = ofPoint(wanderR*cos(wandertheta+currDir),wanderR*sin(wandertheta+currDir));
-    ofPoint target = circleloc + circleOffSet;
+    ofGlmPoint circleOffSet = ofGlmPoint(wanderR*cos(wandertheta+currDir),wanderR*sin(wandertheta+currDir),0);
+    ofGlmPoint target = circleloc + circleOffSet;
     
     desired = target - location;
-    desired.normalize();
+    glm::normalize(desired);
     desired *= topSpeed;
     
     velocityChange = desired;// - velocity;
-    velocityChange.limit(maxVelocityChange);
+	glm::clamp(velocityChange, glm::vec3(0), glm::vec3(maxVelocityChange));
     
     return velocityChange;
 }
@@ -412,14 +414,14 @@ void Rabbit::applyBehaviours(bool seekMother){
     updateBeachDetection();
     
     //    separateF = separateEffect(vehicles);
-    seekF = ofVec2f(0);
+    seekF = glm::vec2(0);
     if (seekMother)
         seekF = seekEffect();
     bordersF = bordersEffect();
     slopesF = slopesEffect();
     wanderF = wanderEffect();
     
-    ofPoint littleSlopeF = slopesF;
+    ofGlmPoint littleSlopeF = ofGlmPoint(slopesF,0);
     
     //    separateF*=1;//2;
     seekF *= 1;
@@ -429,10 +431,9 @@ void Rabbit::applyBehaviours(bool seekMother){
     littleSlopeF *= 1;
     
     float currDir = ofDegToRad(angle);
-    ofPoint oldDir = ofVec2f(cos(currDir), sin(currDir));
-    oldDir.scale(velocityIncreaseStep);
+    ofGlmPoint oldDir = glm::vec3(cos(currDir), sin(currDir),0)*velocityIncreaseStep;
     if (beach)
-        oldDir.scale(velocityIncreaseStep/beachDist);
+        oldDir= oldDir*(velocityIncreaseStep/beachDist);
     
     if (setWait){
         waitCounter++;
@@ -441,20 +442,20 @@ void Rabbit::applyBehaviours(bool seekMother){
             // Compute a new direction
             //            oldDir.scale(topSpeed);
             wanderF = wanderEffect();
-            ofPoint newDir;
-            if (seekF.lengthSquared() == 0){
-                newDir = wanderF;
+            ofGlmPoint newDir;
+            if (glm::length2(seekF) == 0){
+                newDir = ofGlmPoint(wanderF,0);
             } else {
-                newDir = seekF;
+                newDir = ofGlmPoint(seekF,0);
             }
 
             //            newDir +=littleSlopeF;
             if (border)
-                newDir +=bordersF;
+                newDir += ofGlmPoint(bordersF,0);
             if (beach)
-                newDir +=slopesF;
+                newDir += ofGlmPoint(slopesF,0);
             
-            newDir.scale(velocityIncreaseStep);
+            newDir= newDir*velocityIncreaseStep;
             applyVelocityChange(newDir);
             
             currentStraightPathLength = 0;
@@ -468,11 +469,11 @@ void Rabbit::applyBehaviours(bool seekMother){
             applyVelocityChange(oldDir); // Just accelerate
             currentStraightPathLength++;
         } else { // Wee need to decelerate and then change direction
-            if (velocity.lengthSquared() > minVelocity*minVelocity) // We are not stopped yet
+            if (glm::length2(velocity) > minVelocity*minVelocity) // We are not stopped yet
             {
                 applyVelocityChange(-oldDir); // Just deccelerate
             } else {
-                velocity = ofPoint(0);
+                velocity = ofGlmPoint(0);
                 setWait = true;
                 waitCounter = 0;
                 waitTime = ofRandom(minWaitingTime, maxWaitingTime);
@@ -483,7 +484,7 @@ void Rabbit::applyBehaviours(bool seekMother){
     }
 }
 
-void Rabbit::draw()//, std::vector<ofVec2f> forces)
+void Rabbit::draw()//, std::vector<glm::vec2> forces)
 {
     ofPushMatrix();
     ofTranslate(projectorCoord);
@@ -508,14 +509,14 @@ void Rabbit::draw()//, std::vector<ofVec2f> forces)
     }
     
     ofPath body;
-    body.curveTo( ofPoint(-2*sc, 5.5*sc));
-    body.curveTo( ofPoint(-2*sc, 5.5*sc));
-    body.curveTo( ofPoint(-9*sc, 7.5*sc));
-    body.curveTo( ofPoint(-17*sc, 0*sc));
-    body.curveTo( ofPoint(-9*sc, -7.5*sc));
-    body.curveTo( ofPoint(-2*sc, -5.5*sc));
-    body.curveTo( ofPoint(4*sc, 0*sc));
-    body.curveTo( ofPoint(4*sc, 0*sc));
+    body.curveTo( ofGlmPoint(-2*sc, 5.5*sc,0));
+    body.curveTo( ofGlmPoint(-2*sc, 5.5*sc,0));
+    body.curveTo( ofGlmPoint(-9*sc, 7.5*sc,0));
+    body.curveTo( ofGlmPoint(-17*sc, 0*sc,0));
+    body.curveTo( ofGlmPoint(-9*sc, -7.5*sc,0));
+    body.curveTo( ofGlmPoint(-2*sc, -5.5*sc,0));
+    body.curveTo( ofGlmPoint(4*sc, 0*sc,0));
+    body.curveTo( ofGlmPoint(4*sc, 0*sc,0));
     body.close();
     ofSetColor(c1);
     body.setFillColor(c1);
@@ -525,17 +526,17 @@ void Rabbit::draw()//, std::vector<ofVec2f> forces)
     ofDrawCircle(-19*sc, 0, 2*sc);
 
     ofPath head;
-    head.curveTo( ofPoint(0, 1.5*sc));
-    head.curveTo( ofPoint(0, 1.5*sc));
-    head.curveTo( ofPoint(-3*sc, 1.5*sc));
-    head.curveTo( ofPoint(-9*sc, 3.5*sc));
-    head.curveTo( ofPoint(0, 5.5*sc));
-    head.curveTo( ofPoint(8*sc, 0));
-    head.curveTo( ofPoint(0, -5.5*sc));
-    head.curveTo( ofPoint(-9*sc, -3.5*sc));
-    head.curveTo( ofPoint(-3*sc, -1.5*sc));
-    head.curveTo( ofPoint(0, -1.5*sc));
-    head.curveTo( ofPoint(0, -1.5*sc));
+    head.curveTo( ofGlmPoint(0, 1.5*sc,0));
+    head.curveTo( ofGlmPoint(0, 1.5*sc,0));
+    head.curveTo( ofGlmPoint(-3*sc, 1.5*sc,0));
+    head.curveTo( ofGlmPoint(-9*sc, 3.5*sc,0));
+    head.curveTo( ofGlmPoint(0, 5.5*sc,0));
+    head.curveTo( ofGlmPoint(8*sc, 0,0));
+    head.curveTo( ofGlmPoint(0, -5.5*sc,0));
+    head.curveTo( ofGlmPoint(-9*sc, -3.5*sc,0));
+    head.curveTo( ofGlmPoint(-3*sc, -1.5*sc,0));
+    head.curveTo( ofGlmPoint(0, -1.5*sc,0));
+    head.curveTo( ofGlmPoint(0, -1.5*sc,0));
     head.close();
     ofSetColor(c2);
     head.setFillColor(c2);

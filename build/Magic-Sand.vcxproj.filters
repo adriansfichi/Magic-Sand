@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="D:\of_v0.9.8_vs_release\apps\myApps\Magic-Sand\src\KinectProjector\KinectGrabber.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\of_v0.9.8_vs_release\apps\myApps\Magic-Sand\src\KinectProjector\KinectProjector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\of_v0.9.8_vs_release\apps\myApps\Magic-Sand\src\KinectProjector\KinectProjectorCalibration.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\of_v0.9.8_vs_release\apps\myApps\Magic-Sand\src\KinectProjector\libs\dlib\unicode\unicode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\of_v0.9.8_vs_release\apps\myApps\Magic-Sand\src\SandSurfaceRenderer\ColorMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\of_v0.9.8_vs_release\apps\myApps\Magic-Sand\src\SandSurfaceRenderer\SandSurfaceRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\of_v0.9.8_vs_release\apps\myApps\Magic-Sand\src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\of_v0.9.8_vs_release\apps\myApps\Magic-Sand\src\ofApp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\of_v0.9.8_vs_release\apps\myApps\Magic-Sand\src\vehicle.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\of_v0.9.8_vs_release\apps\myApps\Magic-Sand\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{0A344AB2-9752-3158-8EB2-7B4954962CFB}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

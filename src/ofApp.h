@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 #include "ofMain.h"
 #include "ofxDatGui.h"
-#include "KinectProjector/KinectProjector.h"
 #include "SandSurfaceRenderer/SandSurfaceRenderer.h"
 #include "vehicle.h"
 
@@ -31,12 +30,12 @@ class ofApp : public ofBaseApp {
 
 public:
 	void setup();
-    
+	
 	void addNewFish();
 	void addNewRabbit();
 	bool addMotherFish();
 	bool addMotherRabbit();
-	bool setRandomVehicleLocation(ofRectangle area, bool liveInWater, ofVec2f & location);
+	bool setRandomVehicleLocation(ofRectangle area, bool liveInWater, glm::vec2 & location);
 
 	void update();
 
@@ -66,12 +65,12 @@ public:
 	std::shared_ptr<ofAppBaseWindow> projWindow;
 
 private:
-	std::shared_ptr<KinectProjector> kinectProjector;
+	std::shared_ptr<ZedProjector> zedProjector;
 	SandSurfaceRenderer* sandSurfaceRenderer;
 	
 	// Projector and kinect variables
-	ofVec2f projRes;
-	ofVec2f kinectRes;
+	glm::vec2 projRes;
+	glm::vec2 kinectRes;
 	ofRectangle kinectROI;
 	
 	// FBos
@@ -84,8 +83,8 @@ private:
 	int rabbitsNum;
 	
 	// Fish and Rabbits mothers
-	ofPoint motherFish;
-	ofPoint motherRabbit;
+	ofGlmPoint motherFish;
+	ofGlmPoint motherRabbit;
 	bool showMotherFish;
 	bool showMotherRabbit;
 	float motherPlatformSize;

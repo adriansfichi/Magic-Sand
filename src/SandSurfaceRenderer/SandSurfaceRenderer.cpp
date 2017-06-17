@@ -24,13 +24,14 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ***********************************************************************/
 
 #include "SandSurfaceRenderer.h"
+#include "ofxXmlPoco.h"
 
 using namespace ofxCSG;
 
-SandSurfaceRenderer::SandSurfaceRenderer(std::shared_ptr<KinectProjector> const& k, std::shared_ptr<ofAppBaseWindow> const& p)
+SandSurfaceRenderer::SandSurfaceRenderer(std::shared_ptr<ZedProjector> const& k, std::shared_ptr<ofAppBaseWindow> const& p)
 :settingsLoaded(false),
 editColorMap(false){
-    kinectProjector = k;
+    zedProjector = k;
     projWindow = p;
 }
 
@@ -154,17 +155,17 @@ void SandSurfaceRenderer::exit(ofEventArgs& e){
 
 void SandSurfaceRenderer::updateConversionMatrices(){
     // Get conversion matrices
-    transposedKinectProjMatrix = kinectProjector->getTransposedKinectProjMatrix();
-    transposedKinectWorldMatrix = kinectProjector->getTransposedKinectWorldMatrix();
+    transposedZedProjMatrix = zedProjector->getTransposedZedProjMatrix();
+    transposedZedWorldMatrix = zedProjector->getTransposedZedWorldMatrix();
 }
 
 void SandSurfaceRenderer::updateRangesAndBasePlane(){
-    basePlaneEq = kinectProjector->getBasePlaneEq();
-    basePlaneNormal = kinectProjector->getBasePlaneNormal();
-    basePlaneOffset = kinectProjector->getBasePlaneOffset();
+    basePlaneEq = zedProjector->getBasePlaneEq();
+    basePlaneNormal = zedProjector->getBasePlaneNormal();
+    basePlaneOffset = zedProjector->getBasePlaneOffset();
 
     // Set the FilteredDepthImage native scale - converted to 0..1 when send to the shader
-    kinectProjector->updateNativeScale(basePlaneOffset.z+elevationMax, basePlaneOffset.z+elevationMin);
+    zedProjector->updateNativeScale(basePlaneOffset.z+elevationMax, basePlaneOffset.z+elevationMin);
     
     // Calculate the  FilteredDepthImage scaling and offset coefficients
 	FilteredDepthScale = elevationMin-elevationMax;
@@ -176,15 +177,15 @@ void SandSurfaceRenderer::updateRangesAndBasePlane(){
 
 void SandSurfaceRenderer::setupMesh(){
     // Initialise mesh
-    ofRectangle kinectROI = kinectProjector->getKinectROI();
-    ofVec2f kinectRes = kinectProjector->getKinectRes();
-    meshwidth = kinectROI.width;
-    meshheight = kinectROI.height;
+    ofRectangle zedROI = zedProjector->getZedROI();
+    glm::vec2 zedRes = zedProjector->getZedRes();
+    meshwidth =zedROI.width;
+    meshheight = zedROI.height;
     mesh.clear();
     for(unsigned int y=0;y<meshheight;y++)
         for(unsigned int x=0;x<meshwidth;x++)
         {
-            ofPoint pt = ofPoint(x+kinectROI.x,y+kinectROI.y,0.0f)-ofPoint(0.5,0.5,0); // We move of a half pixel to center the color pixel (more beautiful)
+            ofGlmPoint pt = ofGlmPoint(x+zedROI.x,y+zedROI.y,0.0f)-ofGlmPoint(0.5,0.5,0); // We move of a half pixel to center the color pixel (more beautiful)
             mesh.addVertex(pt); // make a new vertex
             mesh.addTexCoord(pt);
         }
@@ -203,11 +204,11 @@ void SandSurfaceRenderer::setupMesh(){
 
 void SandSurfaceRenderer::update(){
     // Update Renderer state if needed
-    if (kinectProjector->isROIUpdated())
+    if (zedProjector->isROIUpdated())
         setupMesh();
-    if (kinectProjector->isBasePlaneUpdated())
+    if (zedProjector->isBasePlaneUpdated())
         updateRangesAndBasePlane();
-    if (kinectProjector->isCalibrationUpdated())
+    if (zedProjector->isCalibrationUpdated())
         updateConversionMatrices();
     
     // Draw sandbox
@@ -247,12 +248,12 @@ void SandSurfaceRenderer::drawProjectorWindow(){
 void SandSurfaceRenderer::drawSandbox() {
     fboProjWindow.begin();
     ofBackground(0);
-    kinectProjector->bind();
+    zedProjector->bind();
     heightMapShader.begin();
-    heightMapShader.setUniformMatrix4f("kinectProjMatrix",transposedKinectProjMatrix);
-    heightMapShader.setUniformMatrix4f("kinectWorldMatrix",transposedKinectWorldMatrix);
-    heightMapShader.setUniform2f("heightColorMapTransformation",ofVec2f(heightMapScale,heightMapOffset));
-    heightMapShader.setUniform2f("depthTransformation",ofVec2f(FilteredDepthScale,FilteredDepthOffset));
+    heightMapShader.setUniformMatrix4f("zedProjMatrix",transposedZedProjMatrix);
+    heightMapShader.setUniformMatrix4f("zedWorldMatrix",transposedZedWorldMatrix);
+    heightMapShader.setUniform2f("heightColorMapTransformation",glm::vec2(heightMapScale,heightMapOffset));
+    heightMapShader.setUniform2f("depthTransformation",glm::vec2(FilteredDepthScale,FilteredDepthOffset));
     heightMapShader.setUniform4f("basePlaneEq", basePlaneEq);
     heightMapShader.setUniformTexture("heightColorMapSampler",heightMap.getTexture(), 2);
     heightMapShader.setUniformTexture("pixelCornerElevationSampler", contourLineFramebufferObject.getTexture(), 3);
@@ -260,7 +261,7 @@ void SandSurfaceRenderer::drawSandbox() {
     heightMapShader.setUniform1i("drawContourLines", drawContourLines);
     mesh.draw();
     heightMapShader.end();
-    kinectProjector->unbind();
+    zedProjector->unbind();
     fboProjWindow.end();
 }
 
@@ -268,22 +269,22 @@ void SandSurfaceRenderer::prepareContourLinesFbo()
 {
     contourLineFramebufferObject.begin();
     ofClear(255,255,255, 0);
-    kinectProjector->bind();
+    zedProjector->bind();
 	elevationShader.begin();
-    elevationShader.setUniformMatrix4f("kinectProjMatrix",transposedKinectProjMatrix);
-    elevationShader.setUniformMatrix4f("kinectWorldMatrix",transposedKinectWorldMatrix);
-    elevationShader.setUniform2f("contourLineFboTransformation",ofVec2f(contourLineFboScale,contourLineFboOffset));
-    elevationShader.setUniform2f("depthTransformation",ofVec2f(FilteredDepthScale,FilteredDepthOffset));
+    elevationShader.setUniformMatrix4f("zedProjMatrix",transposedZedProjMatrix);
+    elevationShader.setUniformMatrix4f("zedWorldMatrix",transposedZedWorldMatrix);
+    elevationShader.setUniform2f("contourLineFboTransformation",glm::vec2(contourLineFboScale,contourLineFboOffset));
+    elevationShader.setUniform2f("depthTransformation",glm::vec2(FilteredDepthScale,FilteredDepthOffset));
     elevationShader.setUniform4f("basePlaneEq", basePlaneEq);
     mesh.draw();
     elevationShader.end();
-    kinectProjector->unbind();
+    zedProjector->unbind();
     contourLineFramebufferObject.end();
 }
 
 void SandSurfaceRenderer::setupGui(){
     // instantiate the modal windows //
-    auto theme = make_shared<ofxModalThemeProjKinect>();
+    auto theme = make_shared<ofxModalThemeProjZed>();
     saveModal = make_shared<SaveModal>(theme);
     saveModal->addListener(this, &SandSurfaceRenderer::onSaveModalEvent);
     
@@ -491,7 +492,6 @@ void SandSurfaceRenderer::onSaveModalEvent(ofxModalEvent e){
             filen += ".xml";
         heightMap.saveFile(colorMapPath+filen);
         colorMapFilesList.push_back(filen);
-        gui2->getDropdown("Load Color Map")->setOptions(colorMapFilesList);
         ofLogVerbose("SandSurfaceRenderer") << "save confirm button pressed, filename: " << filen;
     }
 }
@@ -502,7 +502,7 @@ void SandSurfaceRenderer::onSaveModalEvent(ofxModalEvent e){
 bool SandSurfaceRenderer::loadSettings(){
     string settingsFile = "settings/sandSurfaceRendererSettings.xml";
     
-    ofXml xml;
+	ofxXmlPoco xml;
     if (!xml.load(settingsFile))
         return false;
     xml.setTo("SURFACERENDERERSETTINGS");
@@ -516,8 +516,7 @@ bool SandSurfaceRenderer::loadSettings(){
 bool SandSurfaceRenderer::saveSettings(){
     string settingsFile = "settings/sandSurfaceRendererSettings.xml";
 
-    ofXml xml;
-    xml.addChild("SURFACERENDERERSETTINGS");
+	ofxXmlPoco xml;
     xml.setTo("SURFACERENDERERSETTINGS");
     xml.addValue("colorMapFile", colorMapFile);
     xml.addValue("drawContourLines", drawContourLines);

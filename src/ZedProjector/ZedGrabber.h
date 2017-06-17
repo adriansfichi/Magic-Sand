@@ -1,6 +1,6 @@
 /***********************************************************************
-KinectGrabber - KinectGrabber takes care of the communication with
-the kinect and the filtering of depth frame.
+ZedGrabber - ZedGrabber takes care of the communication with
+the zed and the filtering of depth frame.
 Copyright (c) 2016 Thomas Wolf
 
 --- Adapted from FrameFilter of the Augmented Reality Sandbox
@@ -20,35 +20,45 @@ General Public License for more details.
 ***********************************************************************/
 
 #pragma once
+// Standard includes
+#include <stdio.h>
+#include <string.h>
+
+// OpenGL includes
+
+
+// ZED includes
+#include <sl/Camera.hpp>
+
+// Sample includes
 #include "ofMain.h"
 #include "ofxOpenCv.h"
 #include "ofxCv.h"
-#include "ofxKinect.h"
 
 #include "Utils.h"
 
-class KinectGrabber: public ofThread {
+class ZedGrabber: public ofThread {
 public:
 	typedef unsigned short RawDepth; // Data type for raw depth values
 	typedef float FilteredDepth; // Data type for filtered depth values
 
-	KinectGrabber();
-	~KinectGrabber();
+	ZedGrabber();
+	~ZedGrabber();
     void start();
     void stop();
-    void performInThread(std::function<void(KinectGrabber&)> action);
+    void performInThread(std::function<void(ZedGrabber&)> action);
     bool setup();
-	bool openKinect();
+	bool openZed();
 	void setupFramefilter(int gradFieldresolution, float newMaxOffset, ofRectangle ROI, bool spatialFilter, bool followBigChange, int numAveragingSlots);
     void initiateBuffers(void); // Reinitialise buffers
     void resetBuffers(void);
     
-    ofVec3f getStatBuffer(int x, int y);
+    glm::vec3 getStatBuffer(int x, int y);
     float getAveragingBuffer(int x, int y, int slotNum);
     float getValidBuffer(int x, int y);
     
     void setFollowBigChange(bool newfollowBigChange);
-    void setKinectROI(ofRectangle skinectROI);
+    void setzedROI(ofRectangle szedROI);
     void setAveragingSlotsNumber(int snumAveragingSlots);
     void setGradFieldResolution(int sgradFieldresolution);
     
@@ -64,15 +74,15 @@ public:
         return newFrame;
     }
     
-    ofVec2f getKinectSize(){
-        return ofVec2f(width, height);
+    glm::vec2 getzedSize(){
+        return glm::vec2(width, height);
     }
     
     float getRawDepthAt(int x, int y){
-        return kinectDepthImage.getData()[(int)(y*width+x)];
+        return zedDepthImage.getData()[(int)(y*width+x)];
     }
-    
-	ofMatrix4x4 getWorldMatrix();
+
+	glm::mat4x4  getWorldMatrix();
     
     int getNumAveragingSlots(){
         return numAveragingSlots;
@@ -88,7 +98,34 @@ public:
     
 	ofThreadChannel<ofFloatPixels> filtered;
 	ofThreadChannel<ofPixels> colored;
-	ofThreadChannel<ofVec2f*> gradient;
+	ofThreadChannel<glm::vec2*> gradient;
+
+	//------------------------------------------ofxKuZed implementation
+
+	bool started();		//is ZED working now
+
+
+
+	//All textures and pixels arrays are "lazy" updated,
+	//that is thay are updated only by request
+	ofFloatPixels &getDepthPixels_mm();
+	ofPixels &getDepthPixels_grayscale(float min_depth_mm = 0.0, float max_depth_mm = 5000.0);
+	ofTexture &getDepthTexture(float min_depth_mm = 0.0, float max_depth_mm = 5000.0);
+
+	ofTexture &getLeftTexture();
+	ofPixels &getLeftPixels();
+	ofTexture &getRightTexture();
+	ofPixels &getRightPixels();
+
+	vector<ofGlmPoint> &getPointCloud();
+	vector<ofColor> &getPointCloudColors();
+	vector<ofFloatColor> &getPointCloudFloatColors();	//required for ofMesh
+
+	void drawLeft(float x, float y, float w = 0, float h = 0);
+	void drawRight(float x, float y, float w = 0, float h = 0);
+	void drawDepth(float x, float y, float w = 0, float h = 0, float min_mm = 0, float max_mm = 5000);
+	void drawPointCloud();	//draws a mesh of points
+
     
 private:
 	void threadedFunction() override;
@@ -103,21 +140,21 @@ private:
     int storedframes;
     
     // Thread lambda functions (actions)
-	vector<std::function<void(KinectGrabber&)> > actions;
+	vector<std::function<void(ZedGrabber&)> > actions;
 	ofMutex actionsLock;
     
-    // Kinect parameters
-	bool kinectOpened;
-    ofxKinect               kinect;
-    unsigned int width, height; // Width and height of kinect frames
+    // zed parameters
+	bool zedOpened;
+	sl::Camera  zed;
+    unsigned int width, height; // Width and height of zed frames
     int minX, maxX, ROIwidth; // ROI definition
     int minY, maxY, ROIheight;
     
     // General buffers
-    ofxCvColorImage         kinectColorImage;
-    ofShortPixels     kinectDepthImage;
+    ofxCvColorImage         zedColorImage;
+    ofShortPixels     zedDepthImage;
     ofFloatPixels filteredframe;
-    ofVec2f* gradField;
+    glm::vec2* gradField;
     
     // Filtering buffers
 	float* averagingBuffer; // Buffer to calculate running averages of each pixel's depth value
@@ -143,9 +180,36 @@ private:
 	bool spatialFilter; // Flag whether to apply a spatial filter to time-averaged depth values
     float maxOffset;
     
-    int minInitFrame; // Minimal number of frame to consider the kinect initialized
+    int minInitFrame; // Minimal number of frame to consider the zed initialized
     int currentInitFrame;
     
+
+	//ofxKuZed implementation
+	//Buffers
+
+	bool useImages_ = true;
+	bool useDepth_ = true;
+	bool usePointCloud_ = true;
+	bool usePointCloudColors_ = true;
+
+	bool pointCloudFlipY_ = true;
+	bool pointCloudFlipZ_ = true;
+
+	ofPixels leftPixels_, rightPixels_, depthPixels_grayscale_;
+	ofTexture leftTexture_, rightTexture_, depthTexture_;
+	ofFloatPixels depthPixels_mm_;
+	vector<ofGlmPoint> pointCloud_;
+	vector<ofColor> pointCloudColors_;
+	vector<ofFloatColor> pointCloudFloatColors_;
+
+	//Flags for lazy updating
+	bool leftPixelsDirty_, rightPixelsDirty_, leftTextureDirty_, rightTextureDirty_;
+	bool depthPixels_mm_Dirty_, depthPixels_grayscale_Dirty_, depthTextureDirty_;
+	bool pointCloudDirty_, pointCloudFloatColorsDirty_;
+
+
+	void markBuffersDirty(bool dirty);	//Mark all buffers dirty (need to update by request)
+	void fillPointCloud();
     // Debug
 //    int blockX, blockY;
 };

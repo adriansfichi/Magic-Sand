@@ -1,10 +1,10 @@
 /***********************************************************************
-KinectProjectorCalibration.cpp - KinectProjectorCalibration compute
-the calibration of the kinect and projector.
+ZedProjectorCalibration.cpp - ZedProjectorCalibration compute
+the calibration of the Zed and projector.
 Copyright (c) 2016 Thomas Wolf
 
---- Adapted from ofxKinectProjectorToolkit by Gene Kogan:
-https://github.com/genekogan/ofxKinectProjectorToolkit
+--- Adapted from ofxZedProjectorToolkit by Gene Kogan:
+https://github.com/genekogan/ofxZedProjectorToolkit
 Copyright (c) 2014 Gene Kogan
 
 This file is part of the Magic Sand.
@@ -24,44 +24,45 @@ with the Magic Sand; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ***********************************************************************/
 
-#include "KinectProjectorCalibration.h"
+#include "ZedProjectorCalibration.h"
+#include "ofxXmlPoco.h"
 
-ofxKinectProjectorToolkit::ofxKinectProjectorToolkit(ofVec2f sprojRes, ofVec2f skinectRes) {
+ofxZedProjectorToolkit::ofxZedProjectorToolkit(glm::vec2 sprojRes, glm::vec2 szedRes) {
 	projRes = sprojRes;
-	kinectRes = skinectRes;
+	zedRes = szedRes;
     calibrated = false;
 }
 
-void ofxKinectProjectorToolkit::calibrate(vector<ofVec3f> pairsKinect,
-                                          vector<ofVec2f> pairsProjector) {
-    int nPairs = pairsKinect.size();
+void ofxZedProjectorToolkit::calibrate(vector<glm::vec3> pairsZed,
+                                          vector<glm::vec2> pairsProjector) {
+    int nPairs = pairsZed.size();
     A.set_size(nPairs*2, 11);
     y.set_size(nPairs*2, 1);
     
     for (int i=0; i<nPairs; i++) {
-        A(2*i, 0) = pairsKinect[i].x;
-        A(2*i, 1) = pairsKinect[i].y;
-        A(2*i, 2) = pairsKinect[i].z;
+        A(2*i, 0) = pairsZed[i].x;
+        A(2*i, 1) = pairsZed[i].y;
+        A(2*i, 2) = pairsZed[i].z;
         A(2*i, 3) = 1;
         A(2*i, 4) = 0;
         A(2*i, 5) = 0;
         A(2*i, 6) = 0;
         A(2*i, 7) = 0;
-        A(2*i, 8) = -pairsKinect[i].x * pairsProjector[i].x;
-        A(2*i, 9) = -pairsKinect[i].y * pairsProjector[i].x;
-        A(2*i, 10) = -pairsKinect[i].z * pairsProjector[i].x;
+        A(2*i, 8) = -pairsZed[i].x * pairsProjector[i].x;
+        A(2*i, 9) = -pairsZed[i].y * pairsProjector[i].x;
+        A(2*i, 10) = -pairsZed[i].z * pairsProjector[i].x;
         
         A(2*i+1, 0) = 0;
         A(2*i+1, 1) = 0;
         A(2*i+1, 2) = 0;
         A(2*i+1, 3) = 0;
-        A(2*i+1, 4) = pairsKinect[i].x;
-        A(2*i+1, 5) = pairsKinect[i].y;
-        A(2*i+1, 6) = pairsKinect[i].z;
+        A(2*i+1, 4) = pairsZed[i].x;
+        A(2*i+1, 5) = pairsZed[i].y;
+        A(2*i+1, 6) = pairsZed[i].z;
         A(2*i+1, 7) = 1;
-        A(2*i+1, 8) = -pairsKinect[i].x * pairsProjector[i].y;
-        A(2*i+1, 9) = -pairsKinect[i].y * pairsProjector[i].y;
-        A(2*i+1, 10) = -pairsKinect[i].z * pairsProjector[i].y;
+        A(2*i+1, 8) = -pairsZed[i].x * pairsProjector[i].y;
+        A(2*i+1, 9) = -pairsZed[i].y * pairsProjector[i].y;
+        A(2*i+1, 10) = -pairsZed[i].z * pairsProjector[i].y;
         
         y(2*i, 0) = pairsProjector[i].x;
         y(2*i+1, 0) = pairsProjector[i].y;
@@ -70,26 +71,26 @@ void ofxKinectProjectorToolkit::calibrate(vector<ofVec3f> pairsKinect,
     dlib::qr_decomposition<dlib::matrix<double, 0, 11> > qrd(A);
     x = qrd.solve(y);
     cout << "x: "<< x << endl;
-    projMatrice = ofMatrix4x4(x(0,0), x(1,0), x(2,0), x(3,0),
+    projMatrice = glm::mat4x4(x(0,0), x(1,0), x(2,0), x(3,0),
                               x(4,0), x(5,0), x(6,0), x(7,0),
                               x(8,0), x(9,0), x(10,0), 1,
                               0, 0, 0, 1);
     calibrated = true;
 }
 
-ofMatrix4x4 ofxKinectProjectorToolkit::getProjectionMatrix() {
+glm::mat4x4 ofxZedProjectorToolkit::getProjectionMatrix() {
     return projMatrice;
 }
 
-ofVec2f ofxKinectProjectorToolkit::getProjectedPoint(ofVec3f worldPoint) {
-    ofVec4f pts = ofVec4f(worldPoint);
+glm::vec2 ofxZedProjectorToolkit::getProjectedPoint(glm::vec3 worldPoint) {
+    glm::vec4 pts = glm::vec4(worldPoint,0);
     pts.w = 1;
-    ofVec4f rst = projMatrice*(pts);
-    ofVec2f projectedPoint(rst.x/rst.z, rst.y/rst.z);
+    glm::vec4 rst = projMatrice*(pts);
+    glm::vec2 projectedPoint(rst.x/rst.z, rst.y/rst.z);
     return projectedPoint;
 }
 
-vector<double> ofxKinectProjectorToolkit::getCalibration()
+vector<double> ofxZedProjectorToolkit::getCalibration()
 {
     vector<double> coefficients;
     for (int i=0; i<11; i++) {
@@ -98,20 +99,20 @@ vector<double> ofxKinectProjectorToolkit::getCalibration()
     return coefficients;
 }
 
-bool ofxKinectProjectorToolkit::loadCalibration(string path){
-    ofXml xml;
+bool ofxZedProjectorToolkit::loadCalibration(string path){
+	ofxXmlPoco xml;
     if (!xml.load(path))
         return false;
 	xml.setTo("RESOLUTIONS");
-	ofVec2f sprojRes = xml.getValue<ofVec2f>("PROJECTOR");
-	ofVec2f skinectRes = xml.getValue<ofVec2f>("KINECT");
-	if (sprojRes!=projRes || skinectRes!=kinectRes)
+	glm::vec2 sprojRes = xml.getValue<glm::vec2>("PROJECTOR");
+	glm::vec2 szedRes = xml.getValue<glm::vec2>("Zed");
+	if (sprojRes!=projRes || szedRes!=zedRes)
 		return false;
     xml.setTo("//CALIBRATION/COEFFICIENTS");
     for (int i=0; i<11; i++) {
         x(i, 0) = xml.getValue<float>("COEFF"+ofToString(i));
     }
-    projMatrice = ofMatrix4x4(x(0,0), x(1,0), x(2,0), x(3,0),
+    projMatrice = glm::mat4x4(x(0,0), x(1,0), x(2,0), x(3,0),
                               x(4,0), x(5,0), x(6,0), x(7,0),
                               x(8,0), x(9,0), x(10,0), 1,
                               0, 0, 0, 0);
@@ -119,19 +120,19 @@ bool ofxKinectProjectorToolkit::loadCalibration(string path){
     return true;
 }
 
-bool ofxKinectProjectorToolkit::saveCalibration(string path){
-    ofXml xml;
+bool ofxZedProjectorToolkit::saveCalibration(string path){
+	ofxXmlPoco xml;
 	xml.addChild("CALIBRATION");
 	xml.setTo("//CALIBRATION");
 	xml.addChild("RESOLUTIONS");
 	xml.setTo("RESOLUTIONS");
 	xml.addValue("PROJECTOR", projRes);
-	xml.addValue("KINECT", kinectRes);
+	xml.addValue("Zed", zedRes);
 	xml.setTo("//CALIBRATION");
 	xml.addChild("COEFFICIENTS");
 	xml.setTo("COEFFICIENTS");
 	for (int i=0; i<11; i++) {
-        ofXml coeff;
+		ofxXmlPoco coeff;
         coeff.addValue("COEFF"+ofToString(i), x(i, 0));
         xml.addXml(coeff);
     }

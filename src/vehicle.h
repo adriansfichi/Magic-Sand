@@ -24,12 +24,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "ofxOpenCv.h"
 #include "ofxCv.h"
 
-#include "KinectProjector/KinectProjector.h"
+#include "ZedProjector/ZedProjector.h"
 
 class Vehicle{
 
 public:
-    Vehicle(std::shared_ptr<KinectProjector> const& k, ofPoint slocation, ofRectangle sborders, bool sliveInWater, ofVec2f motherLocation);
+    Vehicle(std::shared_ptr<ZedProjector> const& k, ofGlmPoint slocation, ofRectangle sborders, bool sliveInWater, glm::vec2 motherLocation);
     
     // Virtual functions
     virtual void setup() = 0;
@@ -38,12 +38,12 @@ public:
     
     void update();
     
-    std::vector<ofVec2f> getForces(void);
+    std::vector<glm::vec2> getForces(void);
     
-    const ofPoint& getLocation() const {
+    const ofGlmPoint& getLocation() const {
         return location;
     }
-    const ofPoint& getVelocity() const {
+    const ofGlmPoint& getVelocity() const {
         return velocity;
     }
     
@@ -55,45 +55,45 @@ public:
         return mother;
     }
     
-    void setMotherLocation(ofVec2f loc){
+    void setMotherLocation(glm::vec2 loc){
         motherLocation = loc;
     }
     
 protected:
     void updateBeachDetection();
-    ofPoint seekEffect();
-    ofPoint bordersEffect();
-    ofPoint slopesEffect();
-    virtual ofPoint wanderEffect();
-    void applyVelocityChange(const ofPoint & force);
+    ofGlmPoint seekEffect();
+    ofGlmPoint bordersEffect();
+    ofGlmPoint slopesEffect();
+    virtual ofGlmPoint wanderEffect();
+    void applyVelocityChange(const ofGlmPoint & force);
     
-    std::shared_ptr<KinectProjector> kinectProjector;
+    std::shared_ptr<ZedProjector> zedProjector;
 
-    ofPoint location;
-    ofPoint velocity;
-    ofPoint globalVelocityChange;
-    ofVec2f currentForce;
+    ofGlmPoint location;
+    ofGlmPoint velocity;
+    ofGlmPoint globalVelocityChange;
+    glm::vec2 currentForce;
     float angle; // direction of the drawing
     
-    ofVec2f separateF ;
-    ofVec2f seekF ;
-    ofVec2f bordersF ;
-    ofVec2f slopesF ;
-    ofVec2f wanderF ;
+    glm::vec2 separateF ;
+    glm::vec2 seekF ;
+    glm::vec2 bordersF ;
+    glm::vec2 slopesF ;
+    glm::vec2 wanderF ;
 
     bool beach;
     bool border;
     
     bool mother;
-    ofVec2f motherLocation;
+    glm::vec2 motherLocation;
     
     // For slope effect
     float beachDist;
-    ofVec2f beachSlope;
+    glm::vec2 beachSlope;
     
     bool liveInWater; // true for fish who want to stay in the water, false for rabbits who want to stay on the ground
     
-    ofVec2f projectorCoord;
+    glm::vec2 projectorCoord;
     ofRectangle borders, internalBorders;
     float maxVelocityChange;
     float maxRotation;
@@ -108,26 +108,26 @@ protected:
 
 class Fish : public Vehicle {
 public:
-    Fish(std::shared_ptr<KinectProjector> const& k, ofPoint slocation, ofRectangle sborders, ofVec2f motherLocation) : Vehicle(k, slocation, sborders, true, motherLocation){}
+    Fish(std::shared_ptr<ZedProjector> const& k, ofGlmPoint slocation, ofRectangle sborders, glm::vec2 motherLocation) : Vehicle(k, slocation, sborders, true, motherLocation){}
 
     void setup();
     void applyBehaviours(bool seekMother);
     void draw();
     
 private:
-    ofPoint wanderEffect();
+    ofGlmPoint wanderEffect();
 };
 
 class Rabbit : public Vehicle {
 public:
-    Rabbit(std::shared_ptr<KinectProjector> const& k, ofPoint slocation, ofRectangle sborders, ofVec2f motherLocation) : Vehicle(k, slocation, sborders, false, motherLocation){}
+    Rabbit(std::shared_ptr<ZedProjector> const& k, ofGlmPoint slocation, ofRectangle sborders, glm::vec2 motherLocation) : Vehicle(k, slocation, sborders, false, motherLocation){}
     
     void setup();
     void applyBehaviours(bool seekMother);
     void draw();
 
 private:
-    ofPoint wanderEffect();
+    ofGlmPoint wanderEffect();
 
     int maxStraightPath; // max rabbit straight path length
     int currentStraightPathLength;// current rabbit straight path length
